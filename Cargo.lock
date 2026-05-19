@@ -3,13 +3,6 @@
 version = 4
 
 [[package]]
-name = "async_tutorial"
-version = "0.1.0"
-dependencies = [
- "futures",
-]
-
-[[package]]
 name = "futures"
 version = "0.3.32"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -142,6 +135,13 @@ dependencies = [
  "proc-macro2",
  "quote",
  "unicode-ident",
+]
+
+[[package]]
+name = "timer_future"
+version = "0.1.0"
+dependencies = [
+ "futures",
 ]
 
 [[package]]
