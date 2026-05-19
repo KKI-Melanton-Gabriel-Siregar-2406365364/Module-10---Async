@@ -35,4 +35,22 @@ Even though `spawner.spawn` is called *before* the synchronous `println!("... he
 
 Because synchronous code executes immediately while asynchronous tasks wait for the executor to run them, `"hey hey"` gets printed first!
 
+## Experiment 1.3: Multiple Spawns and Drop Function
 
+![Experiment 1.3 Output](images/experiment_1_3.png)
+
+### Explanation
+
+When you spawned multiple tasks and commented out the `drop(spawner)` line in `main.rs`, the program prints out the initial synchronous code (`hey hey`), then concurrent output from the multiple spawned async tasks (`howdy!`, `howdy2!`, `howdy3!`, and later `done!`, `done2!`, `done3!`), but **the program hangs and never terminates**.
+
+**Correlation between Spawner, Executor, and Drop:**
+
+The architecture of our async runtime uses a channel to communicate between the `Spawner` and the `Executor`:
+- **`Spawner`**: Acts as the *sender* (`SyncSender`) of the channel. When you spawn a task, it sends the task through the channel. 
+- **`Executor`**: Acts as the *receiver* of the channel. Its `run` method loops continuously, calling `ready_queue.recv()` to get the next task to poll.
+
+The `recv()` method is blocking. It will wait indefinitely for new tasks to arrive, *unless* the channel is closed. A channel is only closed when **all** senders associated with it are dropped.
+
+By commenting out `drop(spawner);`, the main function continues to hold onto the original `Spawner` instance while `executor.run()` is executing. Because of this, the `Executor` thinks there is still an active sender that might send more tasks. Therefore, `ready_queue.recv()` never returns an error to break the loop, and the executor hangs indefinitely waiting for more tasks that will never come.
+
+Restoring the `drop(spawner)` function solves this issue. It drops the `main` thread's sender, signaling to the executor that no more new tasks will be queued, allowing the loop (and the program) to exit cleanly once all in-progress tasks are finished!
